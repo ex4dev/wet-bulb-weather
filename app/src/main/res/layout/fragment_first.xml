@@ -5,32 +5,98 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".FirstFragment">
-
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="16dp">
-
-        <Button
-            android:id="@+id/button_first"
+        <ImageView
+            android:id="@+id/weather_icon"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/next"
-            app:layout_constraintBottom_toTopOf="@id/textview_first"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-        />
-
-        <TextView
-            android:id="@+id/textview_first"
+            android:layout_marginLeft="10sp"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:layout_gravity="center"
+            android:padding="0sp"
+            android:src="@drawable/ic_round_wb_sunny_24"
+            android:minWidth="150sp"
+            android:minHeight="150sp"
+            app:tint="?attr/colorPrimary" />
+        <LinearLayout
+            android:id="@+id/temperature_info_layout"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
-            android:text="@string/lorem_ipsum"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@id/button_first" />
+            app:layout_constraintLeft_toRightOf="@id/weather_icon"
+            app:layout_constraintRight_toRightOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:orientation="vertical"
+            >
+            <TextView
+                android:id="@+id/primary_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="88°"
+                android:textAlignment="center"
+                android:fontFamily="sans-serif-medium"
+                android:textSize="75sp" />
+            <TextView
+                android:id="@+id/secondary_text_1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:text="Temperature: 99°"
+                android:textAlignment="center" />
+            <TextView
+                android:id="@+id/secondary_text_2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textSize="17sp"
+                android:text="Humidity: 100%"
+                android:textAlignment="center"
+                />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/weather_subheading"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/temperature_info_layout"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:orientation="vertical"
+            android:gravity="center"
+            >
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/weather_explanation"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            app:layout_constraintTop_toBottomOf="@id/weather_subheading"
+            app:layout_constraintLeft_toLeftOf="parent"
+            app:layout_constraintRight_toRightOf="parent"
+            android:layout_marginTop="20sp"
+            android:padding="10sp"
+            android:background="@drawable/bg_round"
+            android:backgroundTint="#FF5252"
+            >
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:textSize="20sp"
+                android:textColor="@color/white"
+                android:text="Header!" />
+
+            <TextView
+                android:id="@+id/explanation_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/white"
+                android:text="This is a test to see what the explanation of the wet bulb temperature might look like. It goes on multiple lines automatically, and it has a nice margin." />
+        </LinearLayout>
+
     </androidx.constraintlayout.widget.ConstraintLayout>
 </androidx.core.widget.NestedScrollView>
