@@ -8,6 +8,9 @@ import java.util.*
 @Serializable
 data class NWSObservationResponse(val features: List<Feature>) {
 
+    fun getMostRecentObservation(): Feature? =
+        features.minByOrNull { System.currentTimeMillis() - it.properties.timestamp.time }
+
     @Serializable
     data class Feature(val properties: Properties) {
 
