@@ -1,4 +1,5 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
 
     <PreferenceCategory app:title="@string/data_header">
 
@@ -6,10 +7,17 @@
             app:defaultValue="imperial"
             app:entries="@array/units_entries"
             app:entryValues="@array/units_values"
-            app:key="reply"
+            app:key="units"
             app:title="@string/units"
             app:useSimpleSummaryProvider="true" />
 
+    </PreferenceCategory>
+
+    <PreferenceCategory app:title="About">
+        <Preference
+            android:title="Wet Bulb Weather"
+            android:summary="1.0"
+            />
     </PreferenceCategory>
 
 </PreferenceScreen>

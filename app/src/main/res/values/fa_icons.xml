@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="icon_cloud">&#xf0c2;</string>
+    <string name="icon_bolt_lightning">&#xe0b7;</string>
+    <string name="icon_cloud_bolt">&#xf76c;</string>
+    <string name="icon_cloud_rain">&#xf73d;</string>
+    <string name="icon_cloud_showers_heavy">&#xf740;</string>
+    <string name="icon_sun">&#xf185;</string>
+    <string name="icon_moon">&#xf186;</string>
+    <string name="icon_snowflake">&#xf2dc;</string>
+    <string name="icon_umbrella">&#xf0e9;</string>
+    <string name="icon_wind">&#xf72e;</string>
+</resources>
+
+<!-- we could also try https://erikflowers.github.io/weather-icons/ -->

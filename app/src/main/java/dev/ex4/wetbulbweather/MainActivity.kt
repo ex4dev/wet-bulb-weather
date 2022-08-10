@@ -19,14 +19,14 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import dev.ex4.wetbulbweather.databinding.ActivityMainBinding
 import dev.ex4.wetbulbweather.api.API
-import dev.ex4.wetbulbweather.api.APIResponse
 import kotlinx.coroutines.*
-import java.text.DateFormat
 import kotlin.coroutines.suspendCoroutine
+import kotlin.math.round
 
 class MainActivity : AppCompatActivity() {
 
@@ -64,8 +64,37 @@ class MainActivity : AppCompatActivity() {
         CoroutineScope(Dispatchers.IO).launch {
             val location = getUserLocation() ?: return@launch
             val response = API.getForecast(location.latitude, location.longitude, "06")
+            if (response == null) {
+                AlertDialog.Builder(this@MainActivity).setTitle("Error").setMessage("Did not receive a proper response from the API.").show()
+                return@launch
+            }
+            val closestHour = response.getClosestHour()
+            val closestHourIndex = response.hours.indexOf(closestHour)
+            val wbgtRanges = response.getWetBulbRanges()[closestHourIndex]
             withContext(Dispatchers.Main) {
                 findViewById<TextView>(R.id.response).text = response.toString()
+                findViewById<TextView>(R.id.primary_text).text = "${round(wbgtRanges.max).toInt()}°"
+                findViewById<TextView>(R.id.weather_explanation_text).text =
+                    if (wbgtRanges.max < 80) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). Take a 5 minute break from intense activity every 30 minutes."
+                    else if (wbgtRanges.max < 85) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). Take a 5 minute break from intense activity every 25 minutes."
+                    else if (wbgtRanges.max < 88) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). New or unconditioned athletes should have reduced intensity practice and modifications in clothing. Well-conditioned athletes should have more frequent rest breaks and hydration as well as cautious monitoring for symptoms of heat illness. Take a 5 minute break from intense activity every 20 minutes."
+                    else if (wbgtRanges.max < 90) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). All athletes must be under constant observation and supervision. Remove pads and equipment. Take a 5 minute break from intense activity every 15 minutes."
+                    else "Wet bulb globe temperature is between ${wbgtRanges.min} (shade) and ${wbgtRanges.max}° (full sun). Avoid intense outdoor activity."
+                findViewById<TextView>(R.id.weather_explanation_header).text =
+                    if (wbgtRanges.max < 80) "Almost No Risk"
+                    else if (wbgtRanges.max < 85) "Low Risk"
+                    else if (wbgtRanges.max < 88) "Moderate Risk"
+                    else if (wbgtRanges.max < 90) "High Risk"
+                    else "Extreme Risk"
+                findViewById<LinearLayout>(R.id.weather_explanation_card).backgroundTintList = ColorStateList.valueOf(resources.getColor(
+                    if (wbgtRanges.max < 80) R.color.light_green
+                    else if (wbgtRanges.max < 85) R.color.light_green
+                    else if (wbgtRanges.max < 88) R.color.light_orange
+                    else if (wbgtRanges.max < 90) R.color.light_red
+                    else R.color.light_red
+                , null))
+                findViewById<TextView>(R.id.temperature_visualization_shade).text = "${wbgtRanges.min}°"
+                findViewById<TextView>(R.id.temperature_visualization_sun).text = "${wbgtRanges.max}°"
             }
             findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
         }

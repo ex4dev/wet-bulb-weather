@@ -2,6 +2,7 @@ package dev.ex4.wetbulbweather.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlin.math.abs
 
 @Serializable
 data class APIResponse(
@@ -21,6 +22,23 @@ data class APIResponse(
     val nearestGridM: String
 ) {
     fun getWetBulbRanges(): List<WBRange> = ranges.map { WBRange(it[0].toLong(), it[1].toFloat(), it[2].toFloat()) }
+
+    fun getClosestHour(timestamp: Long = System.currentTimeMillis()): Long {
+        var closestHour = Long.MAX_VALUE
+        var closestHourDifference = Long.MAX_VALUE
+        for (hour in hours) {
+            val difference = abs(timestamp - hour)
+            if (difference < closestHourDifference) {
+                closestHour = hour
+                closestHourDifference = difference
+            }
+        }
+        return closestHour
+    }
+
+    fun getClosestHourIndex(timestamp: Long = System.currentTimeMillis()): Int {
+        return hours.indexOf(getClosestHour(timestamp))
+    }
 }
 
 data class WBRange(val timestamp: Long, val min: Float, val max: Float)
