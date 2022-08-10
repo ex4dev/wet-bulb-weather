@@ -21,9 +21,9 @@ import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.core.app.ActivityCompat
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
-import dev.ex4.wetbulbweather.api.NWS
-import dev.ex4.wetbulbweather.api.NWSObservationResponse
 import dev.ex4.wetbulbweather.databinding.ActivityMainBinding
+import dev.ex4.wetbulbweather.api.API
+import dev.ex4.wetbulbweather.api.APIResponse
 import kotlinx.coroutines.*
 import java.text.DateFormat
 import kotlin.coroutines.suspendCoroutine
@@ -62,45 +62,14 @@ class MainActivity : AppCompatActivity() {
     fun refresh() {
         findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = true
         CoroutineScope(Dispatchers.IO).launch {
-            val result: NWSObservationResponse.Feature
-            try {
-                val station = NWS.getClosestStation(getUserLocation() ?: return@launch)!! //todo error handling for when this is null
-                result = NWS.getStationReading(station).getMostRecentObservation()!! //todo error handling for when this is null
-            } catch (e: Throwable) {
-                e.printStackTrace()
-                return@launch
-            }
+            val location = getUserLocation() ?: return@launch
+            val response = API.getForecast(location.latitude, location.longitude, "06")
             withContext(Dispatchers.Main) {
-                findViewById<TextView>(R.id.response).text = result.toString()
-
-                // LAST UPDATE
-                // you are going to hate the way i do this :)
-                findViewById<LinearLayout>(R.id.last_update_card).backgroundTintList =
-                    when (result.properties.timestamp.time - System.currentTimeMillis()) {
-                        in -1800000 .. 0 -> ColorStateList.valueOf(resources.getColor(R.color.light_green, null)) // in the last 30 minutes = green
-                        in -3600000 .. 0 -> ColorStateList.valueOf(resources.getColor(R.color.light_orange, null)) // in the last 60 minutes = green
-                        else -> ColorStateList.valueOf(resources.getColor(R.color.light_red, null)) // otherwise = red
-                    }
-                findViewById<TextView>(R.id.last_update_text).text = DateFormat.getDateTimeInstance().format(result.properties.timestamp)
-
-                // WIND
-                findViewById<LinearLayout>(R.id.wind_card).backgroundTintList = ColorStateList.valueOf(resources.getColor(
-                    when (result.properties.windSpeed.value!!.toInt()) {
-                        in 0 .. 40 -> R.color.light_green
-                        in 0 .. 60 -> R.color.light_orange
-                        else -> R.color.light_red
-                    }
-                , null))
-                findViewById<TextView>(R.id.wind_text).text = "Wind Speed: ${result.properties.windSpeed}\nWind Gust: ${result.properties.windGust.value}\nWind Chill: ${result.properties.windChill.value}\nWind Direction: ${result.properties.windDirection.value}"
-
-                findViewById<TextView>(R.id.secondary_text_1).text = "Temperature: ${result.properties.temperature.value?.toFahrenheit().toString()}°"
-                findViewById<TextView>(R.id.secondary_text_2).text = "Humidity: ${result.properties.relativeHumidity.value?.toString()}%"
+                findViewById<TextView>(R.id.response).text = response.toString()
             }
             findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
         }
     }
-
-    private fun Float.toFahrenheit(): Float = this * 1.8f + 32f
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -138,7 +107,9 @@ class MainActivity : AppCompatActivity() {
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             Log.w("WetBulbWeather", "No permission granted.")
-            nc.navigate(R.id.action_FirstFragment_to_SecondFragment)
+            withContext(Dispatchers.Main) {
+                nc.navigate(R.id.action_FirstFragment_to_SecondFragment)
+            }
             this@MainActivity.requestPermissions(
                 arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 0
             )
