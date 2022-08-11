@@ -63,9 +63,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = true
         CoroutineScope(Dispatchers.IO).launch {
             val location = getUserLocation() ?: return@launch
-            val response = API.getForecast(location.latitude, location.longitude, "06")
+            API.getNWSForecast(location.latitude, location.longitude)
+            val response = API.getWBGTForecast(location.latitude, location.longitude, "06")
             if (response == null) {
-                AlertDialog.Builder(this@MainActivity).setTitle("Error").setMessage("Did not receive a proper response from the API.").show()
+                AlertDialog.Builder(this@MainActivity).setTitle("Error").setMessage("Failed to retrieve Wet Bulb Globe Temperature information.").show()
                 return@launch
             }
             val closestHour = response.getClosestHour()
@@ -96,9 +97,32 @@ class MainActivity : AppCompatActivity() {
                 findViewById<TextView>(R.id.temperature_visualization_shade).text = "${wbgtRanges.min}°"
                 findViewById<TextView>(R.id.temperature_visualization_sun).text = "${wbgtRanges.max}°"
             }
+            val observation = API.getObservation(location.latitude, location.longitude)
+            val instant = observation?.data?.instant?.details
+            val iconName = observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "sun"
+            val icon = when {
+                iconName.contains("snow") -> R.string.icon_snowflake
+                iconName.contains("cloudy") -> R.string.icon_cloud
+                iconName.contains("rain") -> R.string.icon_cloud_rain
+                iconName.contains("thunder") -> R.string.icon_cloud_bolt
+                iconName.contains("clear") -> R.string.icon_sun
+                else -> R.string.icon_sun
+            }
+            if (observation == null || instant == null) {
+                AlertDialog.Builder(this@MainActivity).setTitle("Error").setMessage("Failed to retrieve current weather conditions.").show()
+                return@launch
+            }
+            withContext(Dispatchers.Main) {
+                findViewById<IconTextView>(R.id.weather_icon).text = getString(icon)
+                findViewById<TextView>(R.id.secondary_text_1).text = "Temperature: ${instant.airTemperature.toFahrenheit()}°"
+                findViewById<TextView>(R.id.secondary_text_2).text = "Humidity: ${instant.relativeHumidity}%"
+            }
+
             findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
         }
     }
+
+    private fun Float.toFahrenheit(): Float = this * 1.8f + 32f
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
