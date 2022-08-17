@@ -62,11 +62,17 @@ class MainActivity : AppCompatActivity() {
     fun refresh() {
         findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = true
         CoroutineScope(Dispatchers.IO).launch {
+            Log.i(this::class.simpleName, "Getting location")
             val location = getUserLocation() ?: return@launch
-            API.getNWSForecast(location.latitude, location.longitude)
+            // UNC DATA
+            Log.i(this::class.simpleName, "Getting UNC data")
             val response = API.getWBGTForecast(location.latitude, location.longitude, "06")
             if (response == null) {
-                AlertDialog.Builder(this@MainActivity).setTitle("Error").setMessage("Failed to retrieve Wet Bulb Globe Temperature information.").show()
+                withContext(Dispatchers.Main) {
+                    AlertDialog.Builder(this@MainActivity).setTitle("Error")
+                        .setMessage("Failed to retrieve Wet Bulb Globe Temperature information.")
+                        .show()
+                }
                 return@launch
             }
             val closestHour = response.getClosestHour()
@@ -97,15 +103,19 @@ class MainActivity : AppCompatActivity() {
                 findViewById<TextView>(R.id.temperature_visualization_shade).text = "${wbgtRanges.min}°"
                 findViewById<TextView>(R.id.temperature_visualization_sun).text = "${wbgtRanges.max}°"
             }
+            // NWS DATA
             val observation = API.getObservation(location.latitude, location.longitude)
+            Log.i(this::class.simpleName, observation.toString())
             val instant = observation?.data?.instant?.details
             val iconName = observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "sun"
+            Log.i(this::class.simpleName, iconName)
             val icon = when {
                 iconName.contains("snow") -> R.string.icon_snowflake
                 iconName.contains("cloudy") -> R.string.icon_cloud
                 iconName.contains("rain") -> R.string.icon_cloud_rain
                 iconName.contains("thunder") -> R.string.icon_cloud_bolt
-                iconName.contains("clear") -> R.string.icon_sun
+                iconName.contains("clear") && !iconName.contains("night") -> R.string.icon_sun
+                iconName.contains("night") -> R.string.icon_moon
                 else -> R.string.icon_sun
             }
             if (observation == null || instant == null) {

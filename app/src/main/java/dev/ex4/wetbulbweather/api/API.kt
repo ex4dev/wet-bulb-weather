@@ -1,11 +1,13 @@
 package dev.ex4.wetbulbweather.api
 
 import android.util.Log
+import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
 import okhttp3.*
 import okhttp3.Headers.Companion.toHeaders
 import java.io.IOException
+import java.time.Instant
 import java.util.*
 import kotlin.coroutines.suspendCoroutine
 
@@ -35,9 +37,11 @@ object API {
      * @param longitude The user's longitude
      * @param hour Seems to be either "12" or "06", representing 1:00 PM and 7:00 PM, respectively
      */
-    suspend fun getWBGTForecast(latitude: Double, longitude: Double, hour: String): APIResponse? {
-        val calendar = Calendar.getInstance()
-
+    suspend fun getWBGTForecast(latitude: Double, longitude: Double, hour: String, calendar: Calendar = Calendar.getInstance()): APIResponse? {
+        if (Instant.now().toEpochMilli() - calendar.timeInMillis > 259200000) {
+            Log.e("API", "Failed to get a valid response up to 3 days ago. Cancelling.")
+            return null
+        }
         val year = String.format("%02d", calendar.get(Calendar.YEAR))
         val month = String.format("%02d", calendar.get(Calendar.MONTH) + 1)
         val day = String.format("%02d", calendar.get(Calendar.DAY_OF_MONTH))
@@ -47,7 +51,12 @@ object API {
 
         val url = "$UNC_BASE_URL$UNC_ENDPOINT?lat=$latitude&lon=$longitude&date=$dateString"
 
-        return httpRequest(buildGetRequest(url))?.let { json.decodeFromString<APIResponse>(it) }
+        return try {
+            httpRequest(buildGetRequest(url))?.let {Log.i("API", it); json.decodeFromString<APIResponse>(it)}
+        } catch (e: SerializationException) {
+            Log.i("API", "Failed to deserialize API response. Some values may be null because the model has not been updated yet. Calling the API again with an older timestamp.")
+            getWBGTForecast(latitude, longitude, hour, calendar.apply { add(Calendar.DAY_OF_MONTH, -1)})
+        }
     }
 
     suspend fun getNWSForecast(latitude: Double, longitude: Double): NWSResponse? {
