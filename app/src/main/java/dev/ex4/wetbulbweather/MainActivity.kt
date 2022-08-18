@@ -53,20 +53,20 @@ class MainActivity : AppCompatActivity() {
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)
         if (swipeRefreshLayout != null) {
             swipeRefreshLayout.setOnRefreshListener {
-                refresh()
+                refresh(noCache = true)
             }
             refresh()
         }
     }
 
-    fun refresh() {
+    fun refresh(noCache: Boolean = false) {
         findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = true
         CoroutineScope(Dispatchers.IO).launch {
             Log.i(this::class.simpleName, "Getting location")
             val location = getUserLocation() ?: return@launch
             // UNC DATA
             Log.i(this::class.simpleName, "Getting UNC data")
-            val response = API.getWBGTForecast(location.latitude, location.longitude, "06")
+            val response = API.getWBGTForecast(location.latitude, location.longitude, "06", noCache = noCache)
             if (response == null) {
                 withContext(Dispatchers.Main) {
                     AlertDialog.Builder(this@MainActivity).setTitle("Error")
@@ -104,7 +104,7 @@ class MainActivity : AppCompatActivity() {
                 findViewById<TextView>(R.id.temperature_visualization_sun).text = "${wbgtRanges.max}°"
             }
             // NWS DATA
-            val observation = API.getObservation(location.latitude, location.longitude)
+            val observation = API.getObservation(location.latitude, location.longitude, noCache)
             Log.i(this::class.simpleName, observation.toString())
             val instant = observation?.data?.instant?.details
             val iconName = observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "sun"

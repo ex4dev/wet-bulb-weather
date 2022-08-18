@@ -1,6 +1,7 @@
 package dev.ex4.wetbulbweather.api
 
 import android.util.Log
+import dev.ex4.wetbulbweather.WetBulbWeather
 import kotlinx.serialization.SerializationException
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.json.Json
@@ -9,7 +10,9 @@ import okhttp3.Headers.Companion.toHeaders
 import java.io.IOException
 import java.time.Instant
 import java.util.*
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.suspendCoroutine
+
 
 object API {
 
@@ -21,13 +24,16 @@ object API {
 
     private const val userAgent = "wbgt-app-android/1.0"
 
+    private const val cacheSize = 10L * 1024L * 1024L // 10 MiB
+    private val cache = Cache(WetBulbWeather.instance.applicationContext.cacheDir, cacheSize)
+
     private val json = Json {
         ignoreUnknownKeys = true
         prettyPrint = true
         isLenient = true
     }
 
-    private val client = OkHttpClient()
+    private val client = OkHttpClient.Builder().addNetworkInterceptor(CacheInterceptor()).cache(cache).build()
 
     /**
      * Requests WBGT data from UNC's Wet Bulb Global Temperature Tool:
@@ -37,7 +43,7 @@ object API {
      * @param longitude The user's longitude
      * @param hour Seems to be either "12" or "06", representing 1:00 PM and 7:00 PM, respectively
      */
-    suspend fun getWBGTForecast(latitude: Double, longitude: Double, hour: String, calendar: Calendar = Calendar.getInstance()): APIResponse? {
+    suspend fun getWBGTForecast(latitude: Double, longitude: Double, hour: String, calendar: Calendar = Calendar.getInstance(), noCache: Boolean = false): APIResponse? {
         if (Instant.now().toEpochMilli() - calendar.timeInMillis > 259200000) {
             Log.e("API", "Failed to get a valid response up to 3 days ago. Cancelling.")
             return null
@@ -52,41 +58,56 @@ object API {
         val url = "$UNC_BASE_URL$UNC_ENDPOINT?lat=$latitude&lon=$longitude&date=$dateString"
 
         return try {
-            httpRequest(buildGetRequest(url))?.let {Log.i("API", it); json.decodeFromString<APIResponse>(it)}
+            httpRequest(buildGetRequest(url, noCache = noCache))?.let {Log.i("API", it); json.decodeFromString<APIResponse>(it)}
         } catch (e: SerializationException) {
             Log.i("API", "Failed to deserialize API response. Some values may be null because the model has not been updated yet. Calling the API again with an older timestamp.")
-            getWBGTForecast(latitude, longitude, hour, calendar.apply { add(Calendar.DAY_OF_MONTH, -1)})
+            getWBGTForecast(latitude, longitude, hour, calendar.apply { add(Calendar.DAY_OF_MONTH, -1)}, noCache)
         }
     }
 
-    suspend fun getNWSForecast(latitude: Double, longitude: Double): NWSResponse? {
+    suspend fun getNWSForecast(latitude: Double, longitude: Double, noCache: Boolean = false): NWSResponse? {
         val url = "$NWS_BASE_URL$NWS_FORECAST_ENDPOINT?lat=$latitude&lon=$longitude"
-        return httpRequest(buildGetRequest(url, mapOf("User-Agent" to "wbgt-app-android")))?.let {
+        return httpRequest(buildGetRequest(url, headers = mapOf("User-Agent" to "wbgt-app-android"), noCache))?.let {
             json.decodeFromString<NWSResponse>(it)
         }
     }
 
-    suspend fun getObservation(latitude: Double, longitude: Double): NWSResponse.Properties.Observation? {
-        val forecast = getNWSForecast(latitude, longitude)
+    suspend fun getObservation(latitude: Double, longitude: Double, noCache: Boolean = false): NWSResponse.Properties.Observation? {
+        val forecast = getNWSForecast(latitude, longitude, noCache)
         return forecast?.properties?.timeseries?.firstOrNull()
     }
 
-    private fun buildGetRequest(url: String, headers: Map<String, String>): Request {
-        return Request.Builder().get().url(url).headers(headers.toHeaders()).build()
+    private fun buildGetRequest(url: String, headers: Map<String, String> = mapOf("User-Agent" to userAgent), noCache: Boolean = false): Request {
+        return Request.Builder().get().url(url).headers(headers.toHeaders()).apply { if (noCache) cacheControl(CacheControl.FORCE_NETWORK) }.build()
     }
 
-    private fun buildGetRequest(url: String) =
-        buildGetRequest(url, mapOf("User-Agent" to userAgent))
-
     private suspend fun httpRequest(request: Request): String? = suspendCoroutine { continuation ->
+        val beforeRequest = Instant.now()
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
+                Log.i("API", "Request failed in ${Instant.now().toEpochMilli() - beforeRequest.toEpochMilli()}ms (${call.request().url})")
                 continuation.resumeWith(Result.failure(e))
             }
 
             override fun onResponse(call: Call, response: Response) {
+                Log.i("API", "Request completed in ${Instant.now().toEpochMilli() - beforeRequest.toEpochMilli()}ms (${call.request().url})")
                 continuation.resumeWith(Result.success(response.body?.string()))
             }
         })
+    }
+
+    // https://stackoverflow.com/a/49455438
+    class CacheInterceptor : Interceptor {
+        override fun intercept(chain: Interceptor.Chain): Response {
+            val response: Response = chain.proceed(chain.request())
+            val cacheControl: CacheControl = CacheControl.Builder()
+                .maxAge(120, TimeUnit.MINUTES)
+                .build()
+            return response.newBuilder()
+                .removeHeader("Pragma")
+                .removeHeader("Cache-Control")
+                .header("Cache-Control", cacheControl.toString())
+                .build()
+        }
     }
 }
