@@ -62,23 +62,24 @@ class MainActivity : AppCompatActivity() {
     fun refresh(noCache: Boolean = false) {
         findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = true
         CoroutineScope(Dispatchers.IO).launch {
+            // GET LOCATION
             Log.i(this::class.simpleName, "Getting location")
             val location = getUserLocation() ?: return@launch
-            // UNC DATA
-            Log.i(this::class.simpleName, "Getting UNC data")
-            val response = API.getWBGTForecast(location.latitude, location.longitude, "06", noCache = noCache)
-            if (response == null) {
-                withContext(Dispatchers.Main) {
+            // LOAD DATA
+            val response =
+                API.getWBGTForecast(location.latitude, location.longitude, "06", noCache = noCache)
+            val observation = API.getObservation(location.latitude, location.longitude, noCache)
+            // DISPLAY DATA
+            withContext(Dispatchers.Main) {
+                if (response == null) {
                     AlertDialog.Builder(this@MainActivity).setTitle("Error")
                         .setMessage("Failed to retrieve Wet Bulb Globe Temperature information.")
                         .show()
+                    return@withContext
                 }
-                return@launch
-            }
-            val closestHour = response.getClosestHour()
-            val closestHourIndex = response.hours.indexOf(closestHour)
-            val wbgtRanges = response.getWetBulbRanges()[closestHourIndex]
-            withContext(Dispatchers.Main) {
+                val closestHour = response.getClosestHour()
+                val closestHourIndex = response.hours.indexOf(closestHour)
+                val wbgtRanges = response.getWetBulbRanges()[closestHourIndex]
                 findViewById<TextView>(R.id.response).text = response.toString()
                 findViewById<TextView>(R.id.primary_text).text = "${round(wbgtRanges.max).toInt()}°"
                 findViewById<TextView>(R.id.weather_explanation_text).text =
@@ -93,42 +94,48 @@ class MainActivity : AppCompatActivity() {
                     else if (wbgtRanges.max < 88) "Moderate Risk"
                     else if (wbgtRanges.max < 90) "High Risk"
                     else "Extreme Risk"
-                findViewById<LinearLayout>(R.id.weather_explanation_card).backgroundTintList = ColorStateList.valueOf(resources.getColor(
-                    if (wbgtRanges.max < 80) R.color.light_green
-                    else if (wbgtRanges.max < 85) R.color.light_green
-                    else if (wbgtRanges.max < 88) R.color.light_orange
-                    else if (wbgtRanges.max < 90) R.color.light_red
-                    else R.color.light_red
-                , null))
-                findViewById<TextView>(R.id.temperature_visualization_shade).text = "${wbgtRanges.min}°"
-                findViewById<TextView>(R.id.temperature_visualization_sun).text = "${wbgtRanges.max}°"
-            }
-            // NWS DATA
-            val observation = API.getObservation(location.latitude, location.longitude, noCache)
-            Log.i(this::class.simpleName, observation.toString())
-            val instant = observation?.data?.instant?.details
-            val iconName = observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "sun"
-            Log.i(this::class.simpleName, iconName)
-            val icon = when {
-                iconName.contains("snow") -> R.string.icon_snowflake
-                iconName.contains("cloudy") -> R.string.icon_cloud
-                iconName.contains("rain") -> R.string.icon_cloud_rain
-                iconName.contains("thunder") -> R.string.icon_cloud_bolt
-                iconName.contains("clear") && !iconName.contains("night") -> R.string.icon_sun
-                iconName.contains("night") -> R.string.icon_moon
-                else -> R.string.icon_sun
-            }
-            if (observation == null || instant == null) {
-                AlertDialog.Builder(this@MainActivity).setTitle("Error").setMessage("Failed to retrieve current weather conditions.").show()
-                return@launch
-            }
-            withContext(Dispatchers.Main) {
+                findViewById<LinearLayout>(R.id.weather_explanation_card).backgroundTintList =
+                    ColorStateList.valueOf(
+                        resources.getColor(
+                            if (wbgtRanges.max < 80) R.color.light_green
+                            else if (wbgtRanges.max < 85) R.color.light_green
+                            else if (wbgtRanges.max < 88) R.color.light_orange
+                            else if (wbgtRanges.max < 90) R.color.light_red
+                            else R.color.light_red, null
+                        )
+                    )
+                findViewById<TextView>(R.id.temperature_visualization_shade).text =
+                    "${wbgtRanges.min}°"
+                findViewById<TextView>(R.id.temperature_visualization_sun).text =
+                    "${wbgtRanges.max}°"
+                // NWS DATA
+                val instant = observation?.data?.instant?.details
+                val iconName =
+                    observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "sun"
+                Log.i(this::class.simpleName, iconName)
+                val icon = when {
+                    iconName.contains("snow") -> R.string.icon_snowflake
+                    iconName.contains("cloudy") -> R.string.icon_cloud
+                    iconName.contains("rain") -> R.string.icon_cloud_rain
+                    iconName.contains("thunder") -> R.string.icon_cloud_bolt
+                    iconName.contains("clear") && !iconName.contains("night") -> R.string.icon_sun
+                    iconName.contains("night") -> R.string.icon_moon
+                    else -> R.string.icon_sun
+                }
+                if (observation == null || instant == null) {
+                    AlertDialog.Builder(this@MainActivity).setTitle("Error")
+                        .setMessage("Failed to retrieve current weather conditions.").show()
+                    return@withContext
+                }
                 findViewById<IconTextView>(R.id.weather_icon).text = getString(icon)
-                findViewById<TextView>(R.id.secondary_text_1).text = "Temperature: ${instant.airTemperature.toFahrenheit()}°"
-                findViewById<TextView>(R.id.secondary_text_2).text = "Humidity: ${instant.relativeHumidity}%"
-            }
+                findViewById<TextView>(R.id.secondary_text_1).text =
+                    "Temperature: ${instant.airTemperature.toFahrenheit()}°"
+                findViewById<TextView>(R.id.secondary_text_2).text =
+                    "Humidity: ${instant.relativeHumidity}%"
 
-            findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
+                findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing =
+                    false
+            }
         }
     }
 
