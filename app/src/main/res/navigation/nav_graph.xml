@@ -9,7 +9,7 @@
         android:id="@+id/WeatherFragment"
         android:name="dev.ex4.wetbulbweather.WeatherFragment"
         android:label="@string/first_fragment_label"
-        tools:layout="@layout/fragment_first">
+        tools:layout="@layout/fragment_weather">
 
         <action
             android:id="@+id/action_FirstFragment_to_SecondFragment"

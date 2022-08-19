@@ -8,6 +8,9 @@ import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ProgressBar
+import androidx.fragment.app.FragmentManager
+import androidx.navigation.fragment.findNavController
 import dev.ex4.wetbulbweather.databinding.FragmentNoLocationPermissionBinding
 
 /**
@@ -25,7 +28,6 @@ class NoLocationPermissionFragment : Fragment() {
             inflater: LayoutInflater, container: ViewGroup?,
             savedInstanceState: Bundle?
     ): View? {
-
         _binding = FragmentNoLocationPermissionBinding.inflate(inflater, container, false)
         return binding.root
 

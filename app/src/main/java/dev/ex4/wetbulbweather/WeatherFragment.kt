@@ -6,14 +6,14 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.navigation.fragment.findNavController
-import dev.ex4.wetbulbweather.databinding.FragmentFirstBinding
+import dev.ex4.wetbulbweather.databinding.FragmentWeatherBinding
 
 /**
  * A simple [Fragment] subclass as the default destination in the navigation.
  */
 class WeatherFragment : Fragment() {
 
-    private var _binding: FragmentFirstBinding? = null
+    private var _binding: FragmentWeatherBinding? = null
 
     // This property is only valid between onCreateView and
     // onDestroyView.
@@ -24,7 +24,7 @@ class WeatherFragment : Fragment() {
             savedInstanceState: Bundle?
     ): View? {
 
-        _binding = FragmentFirstBinding.inflate(inflater, container, false)
+        _binding = FragmentWeatherBinding.inflate(inflater, container, false)
         return binding.root
 
     }

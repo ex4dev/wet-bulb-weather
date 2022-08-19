@@ -17,7 +17,9 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.core.app.ActivityCompat
@@ -133,8 +135,10 @@ class MainActivity : AppCompatActivity() {
                 findViewById<TextView>(R.id.secondary_text_2).text =
                     "Humidity: ${instant.relativeHumidity}%"
 
-                findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing =
-                    false
+
+                // DO THIS LAST
+                findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
+                findViewById<ProgressBar>(R.id.loading_progress_bar).visibility = View.GONE
             }
         }
     }
@@ -178,7 +182,9 @@ class MainActivity : AppCompatActivity() {
         ) {
             Log.w("WetBulbWeather", "No permission granted.")
             withContext(Dispatchers.Main) {
-                nc.navigate(R.id.action_FirstFragment_to_SecondFragment)
+                findViewById<ProgressBar>(R.id.loading_progress_bar).visibility = View.GONE
+                if (nc.currentDestination?.id != R.id.NoLocationPermissionFragment)
+                    nc.navigate(R.id.action_FirstFragment_to_SecondFragment)
             }
             this@MainActivity.requestPermissions(
                 arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 0
