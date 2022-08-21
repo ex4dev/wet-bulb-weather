@@ -63,39 +63,42 @@ class MainActivity : AppCompatActivity() {
 
     fun refresh(noCache: Boolean = false) {
         findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = true
-        CoroutineScope(Dispatchers.IO).launch {
-            // GET LOCATION
-            Log.i(this::class.simpleName, "Getting location")
-            val location = getUserLocation() ?: return@launch
+        // GET LOCATION
+        Log.i(this::class.simpleName, "Getting location")
+        val location = getUserLocation() ?: return
+        val uncJob = CoroutineScope(Dispatchers.IO).launch {
             // LOAD DATA
             val response =
                 API.getWBGTForecast(location.latitude, location.longitude, "06", noCache = noCache)
-            val observation = API.getObservation(location.latitude, location.longitude, noCache)
             // DISPLAY DATA
+            val closestHour = response?.getClosestHour()
+            val closestHourIndex = response?.hours?.indexOf(closestHour)
+            val wbgtRanges = response?.getWetBulbRanges()?.getOrNull(closestHourIndex ?: 0)
             withContext(Dispatchers.Main) {
-                if (response == null) {
+                if (response == null || closestHourIndex == null || wbgtRanges == null) {
                     AlertDialog.Builder(this@MainActivity).setTitle("Error")
                         .setMessage("Failed to retrieve Wet Bulb Globe Temperature information.")
                         .show()
                     return@withContext
                 }
-                val closestHour = response.getClosestHour()
-                val closestHourIndex = response.hours.indexOf(closestHour)
-                val wbgtRanges = response.getWetBulbRanges()[closestHourIndex]
                 findViewById<TextView>(R.id.response).text = response.toString()
                 findViewById<TextView>(R.id.primary_text).text = "${round(wbgtRanges.max).toInt()}°"
-                findViewById<TextView>(R.id.weather_explanation_text).text =
-                    if (wbgtRanges.max < 80) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). Take a 5 minute break from intense activity every 30 minutes."
-                    else if (wbgtRanges.max < 85) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). Take a 5 minute break from intense activity every 25 minutes."
-                    else if (wbgtRanges.max < 88) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). New or unconditioned athletes should have reduced intensity practice and modifications in clothing. Well-conditioned athletes should have more frequent rest breaks and hydration as well as cautious monitoring for symptoms of heat illness. Take a 5 minute break from intense activity every 20 minutes."
-                    else if (wbgtRanges.max < 90) "Wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun). All athletes must be under constant observation and supervision. Remove pads and equipment. Take a 5 minute break from intense activity every 15 minutes."
-                    else "Wet bulb globe temperature is between ${wbgtRanges.min} (shade) and ${wbgtRanges.max}° (full sun). Avoid intense outdoor activity."
-                findViewById<TextView>(R.id.weather_explanation_header).text =
-                    if (wbgtRanges.max < 80) "Almost No Risk"
-                    else if (wbgtRanges.max < 85) "Low Risk"
-                    else if (wbgtRanges.max < 88) "Moderate Risk"
-                    else if (wbgtRanges.max < 90) "High Risk"
-                    else "Extreme Risk"
+                val intro = "The wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun)."
+                val hint = when {
+                    wbgtRanges.max < 80 -> "Take a 5 minute break from intense activity every 30 minutes."
+                    wbgtRanges.max < 85 -> "Take a 5 minute break from intense activity every 25 minutes."
+                    wbgtRanges.max < 88 -> "New or unconditioned athletes should have reduced intensity practice and modifications in clothing. Well-conditioned athletes should have more frequent rest breaks and hydration as well as cautious monitoring for symptoms of heat illness. Take a 5 minute break from intense activity every 20 minutes."
+                    wbgtRanges.max < 90 -> "All athletes must be under constant observation and supervision. Remove pads and equipment. Take a 5 minute break from intense activity every 15 minutes."
+                    else -> "Avoid intense outdoor activity."
+                }
+                findViewById<TextView>(R.id.weather_explanation_text).text = "$intro $hint"
+                findViewById<TextView>(R.id.weather_explanation_header).text = when {
+                    wbgtRanges.max < 80 -> "Almost No Risk"
+                    wbgtRanges.max < 85 -> "Low Risk"
+                    wbgtRanges.max < 88 -> "Moderate Risk"
+                    wbgtRanges.max < 90 -> "High Risk"
+                    else -> "Extreme Risk"
+                }
                 findViewById<LinearLayout>(R.id.weather_explanation_card).backgroundTintList =
                     ColorStateList.valueOf(
                         resources.getColor(
@@ -110,20 +113,25 @@ class MainActivity : AppCompatActivity() {
                     "${wbgtRanges.min}°"
                 findViewById<TextView>(R.id.temperature_visualization_sun).text =
                     "${wbgtRanges.max}°"
-                // NWS DATA
-                val instant = observation?.data?.instant?.details
-                val iconName =
-                    observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "sun"
-                Log.i(this::class.simpleName, iconName)
-                val icon = when {
-                    iconName.contains("snow") -> R.string.icon_snowflake
-                    iconName.contains("cloudy") -> R.string.icon_cloud
-                    iconName.contains("rain") -> R.string.icon_cloud_rain
-                    iconName.contains("thunder") -> R.string.icon_cloud_bolt
-                    iconName.contains("clear") && !iconName.contains("night") -> R.string.icon_sun
-                    iconName.contains("night") -> R.string.icon_moon
-                    else -> R.string.icon_sun
-                }
+            }
+        }
+        val nwsJob = CoroutineScope(Dispatchers.IO).launch {
+            // NWS DATA
+            val observation = API.getObservation(location.latitude, location.longitude, noCache)
+            val instant = observation?.data?.instant?.details
+            val iconName =
+                observation?.nextHour?.summary?.symbolCode?.substringBeforeLast('_') ?: "not found"
+            Log.i(this::class.simpleName, "Icon name: $iconName")
+            val icon = when {
+                iconName.contains("snow") -> R.string.icon_snowflake
+                iconName.contains("cloudy") -> R.string.icon_cloud
+                iconName.contains("rain") -> R.string.icon_cloud_rain
+                iconName.contains("thunder") -> R.string.icon_cloud_bolt
+                iconName.contains("clear") && !iconName.contains("night") -> R.string.icon_sun
+                iconName.contains("night") -> R.string.icon_moon
+                else -> R.string.icon_sun
+            }
+            withContext(Dispatchers.Main) {
                 if (observation == null || instant == null) {
                     AlertDialog.Builder(this@MainActivity).setTitle("Error")
                         .setMessage("Failed to retrieve current weather conditions.").show()
@@ -134,16 +142,25 @@ class MainActivity : AppCompatActivity() {
                     "Temperature: ${instant.airTemperature.toFahrenheit()}°"
                 findViewById<TextView>(R.id.secondary_text_2).text =
                     "Humidity: ${instant.relativeHumidity}%"
-
-
-                // DO THIS LAST
+            }
+        }
+        CoroutineScope(Dispatchers.IO).launch {
+            // Wait for both coroutines to complete before hiding the loading indicator
+            uncJob.join()
+            nwsJob.join()
+            // DO THIS LAST
+            withContext(Dispatchers.Main) {
                 findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
                 findViewById<ProgressBar>(R.id.loading_progress_bar).visibility = View.GONE
             }
         }
     }
 
-    private fun Float.toFahrenheit(): Float = this * 1.8f + 32f
+    /**
+     * Converts this Float from celsius to fahrenheit
+     * and rounds to the nearest tenth of a degree.
+     */
+    private fun Float.toFahrenheit(): Float = round((this * 1.8f + 32f) * 10) / 10
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.
