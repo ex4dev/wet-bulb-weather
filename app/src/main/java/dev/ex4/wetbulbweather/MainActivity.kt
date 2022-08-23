@@ -76,29 +76,23 @@ class MainActivity : AppCompatActivity() {
             val wbgtRanges = response?.getWetBulbRanges()?.getOrNull(closestHourIndex ?: 0)
             withContext(Dispatchers.Main) {
                 if (response == null || closestHourIndex == null || wbgtRanges == null) {
-                    AlertDialog.Builder(this@MainActivity).setTitle("Error")
-                        .setMessage("Failed to retrieve Wet Bulb Globe Temperature information.")
+                    AlertDialog.Builder(this@MainActivity).setTitle(getString(R.string.error))
+                        .setMessage(getString(R.string.error_description))
                         .show()
                     return@withContext
                 }
-                findViewById<TextView>(R.id.response).text = response.toString()
-                findViewById<TextView>(R.id.primary_text).text = "${round(wbgtRanges.max).toInt()}°"
-                val intro = "The wet bulb globe temperature is between ${wbgtRanges.min}° (shade) and ${wbgtRanges.max}° (full sun)."
-                val hint = when {
-                    wbgtRanges.max < 80 -> "Take a 5 minute break from intense activity every 30 minutes."
-                    wbgtRanges.max < 85 -> "Take a 5 minute break from intense activity every 25 minutes."
-                    wbgtRanges.max < 88 -> "New or unconditioned athletes should have reduced intensity practice and modifications in clothing. Well-conditioned athletes should have more frequent rest breaks and hydration as well as cautious monitoring for symptoms of heat illness. Take a 5 minute break from intense activity every 20 minutes."
-                    wbgtRanges.max < 90 -> "All athletes must be under constant observation and supervision. Remove pads and equipment. Take a 5 minute break from intense activity every 15 minutes."
-                    else -> "Avoid intense outdoor activity."
+                findViewById<TextView>(R.id.primary_text).text = getString(R.string.wbgt_temperature, round(wbgtRanges.max).toInt())
+                val riskIndex = when {
+                    wbgtRanges.max < 80 -> 0
+                    wbgtRanges.max < 85 -> 1
+                    wbgtRanges.max < 88 -> 2
+                    wbgtRanges.max < 90 -> 3
+                    else -> 4
                 }
+                val intro = getString(R.string.risk_intro, wbgtRanges.min, wbgtRanges.max)
+                val hint = resources.getStringArray(R.array.risk_description)[riskIndex]
                 findViewById<TextView>(R.id.weather_explanation_text).text = "$intro $hint"
-                findViewById<TextView>(R.id.weather_explanation_header).text = when {
-                    wbgtRanges.max < 80 -> "Almost No Risk"
-                    wbgtRanges.max < 85 -> "Low Risk"
-                    wbgtRanges.max < 88 -> "Moderate Risk"
-                    wbgtRanges.max < 90 -> "High Risk"
-                    else -> "Extreme Risk"
-                }
+                findViewById<TextView>(R.id.weather_explanation_header).text = resources.getStringArray(R.array.risk_header)[riskIndex]
                 findViewById<LinearLayout>(R.id.weather_explanation_card).backgroundTintList =
                     ColorStateList.valueOf(
                         resources.getColor(
@@ -109,10 +103,8 @@ class MainActivity : AppCompatActivity() {
                             else R.color.light_red, null
                         )
                     )
-                findViewById<TextView>(R.id.temperature_visualization_shade).text =
-                    "${wbgtRanges.min}°"
-                findViewById<TextView>(R.id.temperature_visualization_sun).text =
-                    "${wbgtRanges.max}°"
+                findViewById<TextView>(R.id.temperature_visualization_shade).text = getString(R.string.shade_temperature, wbgtRanges.min)
+                findViewById<TextView>(R.id.temperature_visualization_sun).text = getString(R.string.sun_temperature, wbgtRanges.max)
             }
         }
         val nwsJob = CoroutineScope(Dispatchers.IO).launch {
@@ -139,9 +131,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 findViewById<IconTextView>(R.id.weather_icon).text = getString(icon)
                 findViewById<TextView>(R.id.secondary_text_1).text =
-                    "Temperature: ${instant.airTemperature.toFahrenheit()}°"
+                    getString(R.string.dry_temperature, instant.airTemperature.toFahrenheit())
                 findViewById<TextView>(R.id.secondary_text_2).text =
-                    "Humidity: ${instant.relativeHumidity}%"
+                    getString(R.string.humidity, instant.relativeHumidity)
             }
         }
         CoroutineScope(Dispatchers.IO).launch {

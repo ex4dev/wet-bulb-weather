@@ -25,13 +25,13 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textSize="25sp"
-            android:text="No location permission" />
+            android:text="@string/no_location_permission" />
         <Button
             android:id="@+id/fix_location_permission_button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="10sp"
-            android:text="Fix"
+            android:text="@string/fix_button_text"
             android:backgroundTint="?colorPrimary" />
     </LinearLayout>
 </androidx.constraintlayout.widget.ConstraintLayout>
