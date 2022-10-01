@@ -1,5 +1,5 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
     <PreferenceCategory app:title="@string/data_header">
 
@@ -15,9 +15,16 @@
 
     <PreferenceCategory app:title="About">
         <Preference
-            android:title="Wet Bulb Weather"
             android:summary="1.0"
-            />
+            android:title="Wet Bulb Weather" />
+
+        <Preference
+            android:summary="Norwegian Weather Service"
+            android:title="Temperature and Humidity Data Source" />
+
+        <Preference
+            android:summary="Southeastern Regional Climate Center"
+            android:title="Wet Bulb Globe Temperature Data Source" />
     </PreferenceCategory>
 
 </PreferenceScreen>
