@@ -157,6 +157,22 @@
                 android:textSize="35sp"
                 android:text="@string/icon_sun"
                 />
+            <TextView
+                android:id="@+id/temperature_graph_header"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:layout_constraintTop_toBottomOf="@id/temperature_visualization_line"
+                android:layout_marginTop="60sp"
+                android:textColor="?attr/colorPrimary"
+                android:textSize="30sp"
+                android:text="By the Hour" />
+            <androidx.fragment.app.FragmentContainerView
+                android:id="@+id/temperature_graph_view"
+                android:layout_width="match_parent"
+                android:layout_height="275sp"
+                app:layout_constraintTop_toBottomOf="@id/temperature_graph_header"
+                android:layout_marginTop="10sp"
+                android:name="dev.ex4.wetbulbweather.TemperatureGraphFragment" />
 
         </androidx.constraintlayout.widget.ConstraintLayout>
     </androidx.core.widget.NestedScrollView>

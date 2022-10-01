@@ -9,6 +9,7 @@ import android.location.*
 import android.os.Bundle
 import android.os.Looper
 import android.util.Log
+import android.util.TypedValue
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.WindowCompat
 import androidx.navigation.findNavController
@@ -22,11 +23,15 @@ import android.widget.LinearLayout
 import android.widget.ProgressBar
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
+import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
+import androidx.fragment.app.FragmentContainerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import dev.ex4.wetbulbweather.databinding.ActivityMainBinding
 import dev.ex4.wetbulbweather.api.API
 import kotlinx.coroutines.*
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.coroutines.suspendCoroutine
 import kotlin.math.round
 
@@ -47,10 +52,6 @@ class MainActivity : AppCompatActivity() {
         val navController = findNavController(R.id.nav_host_fragment_content_main)
         appBarConfiguration = AppBarConfiguration(navController.graph)
         setupActionBarWithNavController(navController, appBarConfiguration)
-
-        binding.fab.setOnClickListener { view ->
-            refresh()
-        }
 
         val swipeRefreshLayout = findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)
         if (swipeRefreshLayout != null) {
@@ -73,7 +74,7 @@ class MainActivity : AppCompatActivity() {
             // DISPLAY DATA
             val closestHour = response?.getClosestHour()
             val closestHourIndex = response?.hours?.indexOf(closestHour)
-            val wbgtRanges = response?.getWetBulbRanges()?.getOrNull(closestHourIndex ?: 0)
+            val wbgtRanges = response?.ranges?.getOrNull(closestHourIndex ?: 0)
             withContext(Dispatchers.Main) {
                 if (response == null || closestHourIndex == null || wbgtRanges == null) {
                     AlertDialog.Builder(this@MainActivity).setTitle(getString(R.string.error))
@@ -105,6 +106,33 @@ class MainActivity : AppCompatActivity() {
                     )
                 findViewById<TextView>(R.id.temperature_visualization_shade).text = getString(R.string.shade_temperature, wbgtRanges.min)
                 findViewById<TextView>(R.id.temperature_visualization_sun).text = getString(R.string.sun_temperature, wbgtRanges.max)
+
+                // Temperature graph
+                val tempGraph = findViewById<FragmentContainerView>(R.id.temperature_graph_view)
+                val calendar = Calendar.getInstance()
+                val sdf = SimpleDateFormat("ha", Locale.US)
+                val offset = Calendar.getInstance().run { get(Calendar.ZONE_OFFSET) + get(Calendar.DST_OFFSET) }
+                val ranges = response.getDisplayRanges()
+                var highestMaxTemp = 0f
+                var lowestMinTemp = 0f
+                ranges.forEach { if (it.max > highestMaxTemp) highestMaxTemp = it.max; if (it.min < lowestMinTemp) lowestMinTemp = it.min }
+                ranges.forEachIndexed { i, range ->
+                    val col = tempGraph.findViewById<FragmentContainerView>(resources.getIdentifier("temperature_graph_col${i + 1}", "id", packageName))
+                    calendar.timeInMillis = range.timestamp
+                    val hourString = sdf.format(calendar.timeInMillis - offset)
+                    col.findViewById<TextView>(R.id.temperature_graph_column_time).text = hourString
+                    col.findViewById<TextView>(R.id.temperature_graph_column_high).text = range.max.toString()
+                    col.findViewById<TextView>(R.id.temperature_graph_column_low).text = range.min.toString()
+                    val background = col.findViewById<View>(R.id.temperature_graph_column_background)
+                    val marginParams = background.layoutParams as ConstraintLayout.LayoutParams
+                    val top = (highestMaxTemp - range.max) * 5
+                    val bottom = (range.min - lowestMinTemp) * 5
+                    println(bottom)
+                    marginParams.topMargin = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, top, resources.displayMetrics).toInt()
+                    marginParams.height = -range.max.toInt() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, (col.height - 60 - bottom), resources.displayMetrics).toInt()
+                    println(marginParams.height)
+                    background.layoutParams = marginParams
+                }
             }
         }
         val nwsJob = CoroutineScope(Dispatchers.IO).launch {

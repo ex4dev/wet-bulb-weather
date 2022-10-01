@@ -2,6 +2,9 @@ package dev.ex4.wetbulbweather.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
 import kotlin.math.abs
 
 @Serializable
@@ -13,7 +16,7 @@ data class APIResponse(
     val shade: List<Float>,
     val actual: List<Float>,
     @SerialName("WBranges")
-    val ranges: List<List<String>>,
+    private val rangesIn: List<List<String>>,
     val lat: Double,
     val lon: Double,
     @SerialName("nearest grid n")
@@ -21,7 +24,9 @@ data class APIResponse(
     @SerialName("nearest grid m")
     val nearestGridM: String
 ) {
-    fun getWetBulbRanges(): List<WBRange> = ranges.map { WBRange(it[0].toLong(), it[1].toFloat(), it[2].toFloat()) }
+    val ranges by lazy {
+        rangesIn.map { WBRange(it[0].toLong(), it[1].toFloat(), it[2].toFloat()) }
+    }
 
     fun getClosestHour(timestamp: Long = System.currentTimeMillis()): Long {
         var closestHour = Long.MAX_VALUE
@@ -34,6 +39,16 @@ data class APIResponse(
             }
         }
         return closestHour
+    }
+
+    fun getDisplayRanges(): List<WBRange> {
+        // Get the offset of the current time zone from UTC
+        val offset = Calendar.getInstance().run { get(Calendar.ZONE_OFFSET) + get(Calendar.DST_OFFSET) }
+
+        return ranges
+            .sortedBy { abs(System.currentTimeMillis() + offset - it.timestamp) }
+            .take(4)
+            .sortedBy { it.timestamp - System.currentTimeMillis() }
     }
 
     fun getClosestHourIndex(timestamp: Long = System.currentTimeMillis()): Int {

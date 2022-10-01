@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    tools:context=".TemperatureGraphPartFragment">
+
+    <View
+        android:id="@+id/temperature_graph_column_background"
+        android:layout_width="60sp"
+        android:layout_height="200sp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:background="@drawable/line_gradient_vertical"
+        android:backgroundTintMode="?attr/line_tint_mode"
+        />
+    <TextView
+        android:id="@+id/temperature_graph_column_low"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="@id/temperature_graph_column_background"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        android:textAlignment="center"
+        android:textColor="@color/black"
+        android:textSize="23sp"
+        android:textStyle="bold"
+        android:text="100" />
+    <TextView
+        android:id="@+id/temperature_graph_column_high"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintTop_toTopOf="@id/temperature_graph_column_background"
+        android:textAlignment="center"
+        android:textColor="@color/white"
+        android:textSize="23sp"
+        android:textStyle="bold"
+        android:text="100" />
+    <TextView
+        android:id="@+id/temperature_graph_column_time"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent"
+        android:textAlignment="center"
+        android:textSize="30sp"
+        android:textStyle="bold"
+        android:text="8PM" />
+
+
+</androidx.constraintlayout.widget.ConstraintLayout>
