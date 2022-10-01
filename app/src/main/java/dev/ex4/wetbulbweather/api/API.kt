@@ -41,7 +41,7 @@ object API {
      *
      * @param latitude The user's latitude
      * @param longitude The user's longitude
-     * @param hour Seems to be either "12" or "06", representing 1:00 PM and 7:00 PM, respectively
+     * @param hour Seems to be either "12" or "06", representing 1:00 PM and 7:00 AM, respectively
      */
     suspend fun getWBGTForecast(latitude: Double, longitude: Double, hour: String, calendar: Calendar = Calendar.getInstance(), noCache: Boolean = false): APIResponse? {
         if (Instant.now().toEpochMilli() - calendar.timeInMillis > 259200000) {

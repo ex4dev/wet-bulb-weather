@@ -26,6 +26,7 @@ import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.FragmentContainerView
+import androidx.preference.PreferenceManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import dev.ex4.wetbulbweather.databinding.ActivityMainBinding
 import dev.ex4.wetbulbweather.api.API
@@ -82,7 +83,10 @@ class MainActivity : AppCompatActivity() {
                         .show()
                     return@withContext
                 }
-                findViewById<TextView>(R.id.primary_text).text = getString(R.string.wbgt_temperature, round(wbgtRanges.max).toInt())
+                findViewById<TextView>(R.id.primary_text).text =
+                    getString(R.string.wbgt_temperature,
+                        formatTemperature(round((wbgtRanges.max + wbgtRanges.min) / 2.0), TempUnit.FAHRENHEIT)
+                    )
                 val riskIndex = when {
                     wbgtRanges.max < 80 -> 0
                     wbgtRanges.max < 85 -> 1
@@ -90,7 +94,10 @@ class MainActivity : AppCompatActivity() {
                     wbgtRanges.max < 90 -> 3
                     else -> 4
                 }
-                val intro = getString(R.string.risk_intro, wbgtRanges.min, wbgtRanges.max)
+                val intro = getString(R.string.risk_intro,
+                    formatTemperature(wbgtRanges.min, TempUnit.FAHRENHEIT),
+                    formatTemperature(wbgtRanges.max, TempUnit.FAHRENHEIT)
+                )
                 val hint = resources.getStringArray(R.array.risk_description)[riskIndex]
                 findViewById<TextView>(R.id.weather_explanation_text).text = "$intro $hint"
                 findViewById<TextView>(R.id.weather_explanation_header).text = resources.getStringArray(R.array.risk_header)[riskIndex]
@@ -104,33 +111,27 @@ class MainActivity : AppCompatActivity() {
                             else R.color.light_red, null
                         )
                     )
-                findViewById<TextView>(R.id.temperature_visualization_shade).text = getString(R.string.shade_temperature, wbgtRanges.min)
-                findViewById<TextView>(R.id.temperature_visualization_sun).text = getString(R.string.sun_temperature, wbgtRanges.max)
+                findViewById<TextView>(R.id.temperature_visualization_shade).text = getString(R.string.shade_temperature, formatTemperature(wbgtRanges.min, TempUnit.FAHRENHEIT))
+                findViewById<TextView>(R.id.temperature_visualization_sun).text = getString(R.string.sun_temperature, formatTemperature(wbgtRanges.max, TempUnit.FAHRENHEIT))
 
                 // Temperature graph
                 val tempGraph = findViewById<FragmentContainerView>(R.id.temperature_graph_view)
-                val calendar = Calendar.getInstance()
                 val sdf = SimpleDateFormat("ha", Locale.US)
-                val offset = Calendar.getInstance().run { get(Calendar.ZONE_OFFSET) + get(Calendar.DST_OFFSET) }
                 val ranges = response.getDisplayRanges()
-                var highestMaxTemp = 0f
-                var lowestMinTemp = 0f
-                ranges.forEach { if (it.max > highestMaxTemp) highestMaxTemp = it.max; if (it.min < lowestMinTemp) lowestMinTemp = it.min }
+                val highestMaxTemp = ranges.maxOf { it.max }
+                val lowestMinTemp = ranges.minOf { it.min }
                 ranges.forEachIndexed { i, range ->
                     val col = tempGraph.findViewById<FragmentContainerView>(resources.getIdentifier("temperature_graph_col${i + 1}", "id", packageName))
-                    calendar.timeInMillis = range.timestamp
-                    val hourString = sdf.format(calendar.timeInMillis - offset)
+                    val hourString = sdf.format(range.timestamp)
                     col.findViewById<TextView>(R.id.temperature_graph_column_time).text = hourString
-                    col.findViewById<TextView>(R.id.temperature_graph_column_high).text = range.max.toString()
-                    col.findViewById<TextView>(R.id.temperature_graph_column_low).text = range.min.toString()
+                    col.findViewById<TextView>(R.id.temperature_graph_column_high).text = formatTemperature(range.max, TempUnit.FAHRENHEIT).toString()
+                    col.findViewById<TextView>(R.id.temperature_graph_column_low).text = formatTemperature(range.min, TempUnit.FAHRENHEIT).toString()
                     val background = col.findViewById<View>(R.id.temperature_graph_column_background)
                     val marginParams = background.layoutParams as ConstraintLayout.LayoutParams
                     val top = (highestMaxTemp - range.max) * 5
                     val bottom = (range.min - lowestMinTemp) * 5
-                    println(bottom)
                     marginParams.topMargin = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, top, resources.displayMetrics).toInt()
                     marginParams.height = -range.max.toInt() + TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, (col.height - 60 - bottom), resources.displayMetrics).toInt()
-                    println(marginParams.height)
                     background.layoutParams = marginParams
                 }
             }
@@ -159,7 +160,7 @@ class MainActivity : AppCompatActivity() {
                 }
                 findViewById<IconTextView>(R.id.weather_icon).text = getString(icon)
                 findViewById<TextView>(R.id.secondary_text_1).text =
-                    getString(R.string.dry_temperature, instant.airTemperature.toFahrenheit())
+                    getString(R.string.dry_temperature, formatTemperature(instant.airTemperature, TempUnit.CELSIUS))
                 findViewById<TextView>(R.id.secondary_text_2).text =
                     getString(R.string.humidity, instant.relativeHumidity)
             }
@@ -168,7 +169,7 @@ class MainActivity : AppCompatActivity() {
             // Wait for both coroutines to complete before hiding the loading indicator
             uncJob.join()
             nwsJob.join()
-            // DO THIS LAST
+            // After both jobs have completed, remove the loading indicator from the UI
             withContext(Dispatchers.Main) {
                 findViewById<SwipeRefreshLayout>(R.id.main_weather_refresh_layout)?.isRefreshing = false
                 findViewById<ProgressBar>(R.id.loading_progress_bar).visibility = View.GONE
@@ -180,7 +181,31 @@ class MainActivity : AppCompatActivity() {
      * Converts this Float from celsius to fahrenheit
      * and rounds to the nearest tenth of a degree.
      */
-    private fun Float.toFahrenheit(): Float = round((this * 1.8f + 32f) * 10) / 10
+    private fun Number.toFahrenheit(): Float = round((this.toFloat() * 1.8f + 32f) * 10) / 10
+
+    /**
+     * Converts this Float from fahreiheit to celsius
+     * and rounds to the nearest tenth of a degree.
+     */
+    private fun Number.toCelsuis(): Float = round(((this.toFloat() - 32f) * (5f / 9f)) * 10) / 10
+
+    enum class TempUnit { FAHRENHEIT, CELSIUS }
+
+    private fun formatTemperature(temp: Number, currentUnit: TempUnit): Float {
+        val imperial = PreferenceManager.getDefaultSharedPreferences(this)
+            .getString("units", "Imperial") == "imperial"
+        return if (imperial) {
+            when(currentUnit) {
+                TempUnit.FAHRENHEIT -> round(temp.toFloat() * 10.0f) / 10.0f // no conversion
+                TempUnit.CELSIUS -> temp.toFahrenheit() // convert C -> F
+            }
+        } else {
+            when (currentUnit) {
+                TempUnit.FAHRENHEIT -> temp.toCelsuis() // convert F -> C
+                TempUnit.CELSIUS -> round(temp.toFloat() * 10.0f) / 10.0f // no conversion
+            }
+        }
+    }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
         // Inflate the menu; this adds items to the action bar if it is present.

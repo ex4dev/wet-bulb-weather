@@ -21,7 +21,7 @@
 
     <!-- Main weather screen -->
     <string name="temperature_header">Wet Bulb Temperature</string>
-    <string name="wbgt_temperature" translatable="false">%d°</string>
+    <string name="wbgt_temperature" translatable="false">%.1f°</string>
     <string name="dry_temperature">Temperature: %.1f°</string>
     <string name="humidity">Humidity: %.1f%%</string>
     <string-array name="risk_header">

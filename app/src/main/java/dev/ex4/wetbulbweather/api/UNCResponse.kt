@@ -2,9 +2,6 @@ package dev.ex4.wetbulbweather.api
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
-import java.text.DateFormat
-import java.text.SimpleDateFormat
-import java.util.*
 import kotlin.math.abs
 
 @Serializable
@@ -42,11 +39,8 @@ data class APIResponse(
     }
 
     fun getDisplayRanges(): List<WBRange> {
-        // Get the offset of the current time zone from UTC
-        val offset = Calendar.getInstance().run { get(Calendar.ZONE_OFFSET) + get(Calendar.DST_OFFSET) }
-
         return ranges
-            .sortedBy { abs(System.currentTimeMillis() + offset - it.timestamp) }
+            .sortedBy { abs(System.currentTimeMillis() - it.timestamp) }
             .take(4)
             .sortedBy { it.timestamp - System.currentTimeMillis() }
     }
