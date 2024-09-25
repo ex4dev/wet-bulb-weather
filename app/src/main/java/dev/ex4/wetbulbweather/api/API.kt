@@ -17,7 +17,7 @@ import kotlin.coroutines.suspendCoroutine
 object API {
 
     private const val UNC_BASE_URL = "https://sercc.oasis.unc.edu"
-    private const val UNC_ENDPOINT = "/wbgt_v4/dataNdates_v2_mixmodel.php"
+    private const val UNC_ENDPOINT = "/wbgt_v6/dataNdates_v2_mixmodel.php"
 
     private const val NWS_BASE_URL = "https://api.met.no"
     private const val NWS_FORECAST_ENDPOINT = "/weatherapi/locationforecast/2.0/compact.json"
